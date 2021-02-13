@@ -17,12 +17,6 @@
     "adminPassword": {
       "value": ""
     },
-    "deployClientVM": {
-      "value": "No"
-    },
-    "clientVhdUri": {
-      "value": "yes"
-    },
     "vmSize": {
       "value": "Standard_DS2_v2"
     },
@@ -30,10 +24,7 @@
       "value": ""
     },
     "_artifactsLocation": {
-      "value": "https://raw.githubusercontent.com/maxskunkworks/tlg/master/tlg-base-config_3-vm"
-    },
-    "_artifactsLocation": {
-      "value": ""
+      "value": "https://raw.githubusercontent.com/ecstrim/lab-adds-02/master/tlg-base-config_3-vm"
     }
   }
 }
