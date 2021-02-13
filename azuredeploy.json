@@ -7,7 +7,7 @@
       "metadata": {
         "description": "The name of the deployment, i.e. BaseConfig01. Do not use spaces or special characters other than _ or -. Used to concatenate resource names for the deployment."
       },
-      "defaultValue": "AADAPX-01"
+      "defaultValue": "AADAPX-02"
     },
     "domainName": {
       "type": "string",
@@ -58,7 +58,7 @@
       "metadata": {
         "description": "Auto-generated container in staging storage account to receive post-build staging folder upload."
       },
-      "defaultValue": "https://raw.githubusercontent.com/ecstrim/lab-adds-simple/master"
+      "defaultValue": "https://raw.githubusercontent.com/ecstrim/lab-adds-02/master"
     },
     "_artifactsLocationSasToken": {
       "type": "securestring",

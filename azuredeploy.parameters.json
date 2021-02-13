@@ -15,7 +15,7 @@
       "value": "labadmin"
     },
     "adminPassword": {
-      "value": ""
+      "value": "1337.Passw0rd"
     },
     "vmSize": {
       "value": "Standard_DS2_v2"
