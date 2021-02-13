@@ -441,7 +441,6 @@
       }
     }
   ],
-
   "outputs": {
     "DcPublicIpAddress": {
       "type": "string",
