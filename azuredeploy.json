@@ -7,7 +7,7 @@
       "metadata": {
         "description": "The name of the deployment, i.e. BaseConfig01. Do not use spaces or special characters other than _ or -. Used to concatenate resource names for the deployment."
       },
-      "defaultValue": "ADDS_LAB_BaseConfig-01"
+      "defaultValue": "AADAPX-01"
     },
     "domainName": {
       "type": "string",
@@ -39,27 +39,10 @@
         "description": "The administrator account password."
       }
     },
-    "deployClientVm": {
-      "type": "string",
-      "allowedValues": [
-        "No", "Yes"
-      ],
-      "metadata": {
-        "description": "Choose 'No' to deploy no client VM, or 'Yes' if you want to deploy a client VM from a custom generalized VHD that you have uploaded to an accessible storage account."
-      },
-      "defaultValue": "No"
-    },
-    "clientVhdUri": {
-      "type": "string",
-      "metadata": {
-        "description": "The URI of the storage account containing the client VHD. Leave blank if you are not deploying a client VM."
-      },
-      "defaultValue": ""
-    },
     "vmSize": {
       "type": "string",
       "metadata": {
-        "description": "Select a VM size for all VMs in your deployment."
+        "description": "Select a VM size for all WINDOWS VMs in your deployment. (Linux VM is B2s)"
       },
       "allowedValues": ["Standard_B2s", "Standard_B2ms", "Standard_DS1_v2", "Standard_D2s_v3"],
       "defaultValue": "Standard_B2ms"
@@ -109,16 +92,16 @@
       "adNicIP": "10.0.0.10",
       "adPublicIpName": "[concat(parameters('configName'),'-AD_IP')]",
 
-      "appVmName": "APP1",
+      "appVmName": "APPX",
       "appConfigurationFunction": {
         "AppConfig": "AppConfig.ps1\\AppConfig"
       },
       "appNicIP": "10.0.0.11",
       "appPublicIpName": "[concat(parameters('configName'),'-APP_IP')]",
 
-      "cliVmName": "CLIENT1",
-      "clientNicIP": "10.0.0.12",
-      "cliPublicIpName": "[concat(parameters('configName'),'-CLI_IP')]"
+      "linuxVmName": "LINUXSRV",
+      "linuxNicIP": "10.0.0.12",
+      "linuxPublicIpName": "[concat(parameters('configName'),'-LINUX_IP')]"
     },
 
     "SharedVmConfig": {
@@ -157,6 +140,34 @@
               "destinationAddressPrefix": "*",
               "access": "Allow",
               "priority": 100,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "http-rule",
+            "properties": {
+              "description": "Allow HTTP",
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "80",
+              "sourceAddressPrefix": "93.39.149.48/32",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 110,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "https-rule",
+            "properties": {
+              "description": "Allow HTTPS",
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "443",
+              "sourceAddressPrefix": "93.39.149.48/32",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 120,
               "direction": "Inbound"
             }
           }
@@ -223,25 +234,24 @@
       "type": "Microsoft.Network/publicIPAddresses",
       "name": "[variables('VMs').appPublicIpName]",
       "location": "[resourceGroup().location]",
-      "comments": "This is the public IP address for the app server VM.",
+      "comments": "This is the public IP address for the application proxy VM.",
       "properties": {
         "publicIPAllocationMethod": "Static",
         "dnsSettings": {
-          "domainNameLabel": "[toLower(concat(parameters('dnsLabelPrefix'),'app'))]"
+          "domainNameLabel": "[toLower(concat(parameters('dnsLabelPrefix'),'proxy'))]"
         }
       }
     },
     {
       "apiVersion": "2017-06-01",
-      "condition": "[equals(parameters('deployClientVm'),'Yes')]",
       "type": "Microsoft.Network/publicIPAddresses",
-      "name": "[variables('VMs').cliPublicIpName]",
+      "name": "[variables('VMs').linuxPublicIpName]",
       "location": "[resourceGroup().location]",
-      "comments": "This is the public IP address for the client VM.",
+      "comments": "This is the public IP address for the Linux Server VM.",
       "properties": {
         "publicIPAllocationMethod": "Static",
         "dnsSettings": {
-          "domainNameLabel": "[toLower(concat(parameters('dnsLabelPrefix'),'cli'))]"
+          "domainNameLabel": "[toLower(concat(parameters('dnsLabelPrefix'),'linux'))]"
         }
       }
     },
@@ -280,7 +290,7 @@
         "[concat('Microsoft.Network/virtualNetworks/',parameters('configName'),'-vnet')]"
       ],
       "apiVersion": "2018-01-01",
-      "comments": "This is the network interface for the app server VM.",
+      "comments": "This is the network interface for the app proxy VM.",
       "properties": {
         "ipConfigurations": [
           {
@@ -306,25 +316,21 @@
       }
     },
     {
-      "name": "[concat(parameters('configName'),'-CLI_NIC')]",
-      "condition": "[equals(parameters('deployClientVm'),'Yes')]",
+      "name": "[concat(parameters('configName'),'-LNX_NIC')]",
       "type": "Microsoft.Network/networkInterfaces",
       "location": "[resourceGroup().location]",
       "dependsOn": [
         "[concat('Microsoft.Network/virtualNetworks/',parameters('configName'),'-vnet')]"
       ],
       "apiVersion": "2018-01-01",
-      "comments": "This is the network interface for the client VM.",
+      "comments": "This is the network interface for the linux Server VM.",
       "properties": {
         "ipConfigurations": [
           {
             "name": "ipconfig1",
             "properties": {
               "privateIPAllocationMethod": "Static",
-              "privateIPAddress": "[variables('VMs').clientNicIP]",
-              "publicIPAddress": {
-                "id": "[resourceId ('Microsoft.Network/publicIPAddresses/',variables('VMs').cliPublicIpName)]"
-              },
+              "privateIPAddress": "[variables('VMs').linuxNicIP]",
               "subnet": {
                 "id": "[variables('network').subnetRef]"
               }
@@ -373,10 +379,10 @@
       }
     },
     {
-      "name": "AppServer",
+      "name": "AppProxyServer",
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2015-01-01",
-      "comments": "This is the deployment resource for the app server VM.",
+      "comments": "This is the deployment resource for the app proxy VM.",
       "dependsOn": [
         "[concat('Microsoft.Network/networkInterfaces/',parameters('configName'),'-APP_NIC')]",
         "[concat('Microsoft.Resources/deployments/','ADDC')]"
@@ -407,13 +413,12 @@
       }
     },
     {
-      "name": "Client",
-      "condition": "[equals(parameters('deployClientVm'),'Yes')]",
+      "name": "LinuxServer",
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2015-01-01",
-      "comments": "This is the deployment resource for the client VM.",
+      "comments": "This is the deployment resource for the Linux Server VM.",
       "dependsOn": [
-        "[concat('Microsoft.Network/networkInterfaces/',parameters('configName'),'-CLI_NIC')]",
+        "[concat('Microsoft.Network/networkInterfaces/',parameters('configName'),'-LNX_NIC')]",
         "[concat('Microsoft.Resources/deployments/','ADDC')]"
       ],
       "properties": {
@@ -427,13 +432,10 @@
             "value": "[variables('SharedVmConfig')]" 
           },
           "vmName": {
-            "value": "[variables('VMs').cliVmName]"
+            "value": "[variables('VMs').linuxVmName]"
           },
           "nicName": {
-            "value": "[concat(parameters('configName'),'-CLI_NIC')]"
-          },
-          "vhdUri": {
-            "value": "[parameters('clientVhdUri')]"
+            "value": "[concat(parameters('configName'),'-LNX_NIC')]"
           }
         }
       }
